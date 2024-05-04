@@ -1,21 +1,30 @@
+const { getStore } = require("../store.js");
+const mongoose = require("mongoose");
 const path = require("path");
 const fs = require("fs").promises;
 
 const blacklistFile = path.join(__dirname, "blacklist.json");
 
+const BlacklistedUser = mongoose.model("BlacklistedUser", { id: String });
+
 async function addToBlacklist(authorId) {
   try {
-    let blacklistJson = {};
-    try {
-      const blacklistData = await fs.readFile(blacklistFile, "utf8");
-      blacklistJson = JSON.parse(blacklistData);
-    } catch (readError) {
-      // Skip since we will create the object.
+    if (getStore()) {
+      const blacklistedUser = new BlacklistedUser({ id: authorId });
+      await blacklistedUser.save();
+    } else {
+      let blacklistJson = {};
+      try {
+        const blacklistData = await fs.readFile(blacklistFile, "utf8");
+        blacklistJson = JSON.parse(blacklistData);
+      } catch (readError) {
+        // Skip since we will create the object.
+      }
+
+      blacklistJson[authorId] = true;
+
+      await fs.writeFile(blacklistFile, JSON.stringify(blacklistJson, null, 2));
     }
-
-    blacklistJson[authorId] = true;
-
-    await fs.writeFile(blacklistFile, JSON.stringify(blacklistJson, null, 2));
 
     console.log(`Added ${authorId} to blacklist.`);
   } catch (error) {
@@ -25,6 +34,13 @@ async function addToBlacklist(authorId) {
 
 async function isBlacklisted(authorId) {
   try {
+    if (getStore()) {
+      const doesBlacklistedUserExist = await BlacklistedUser.exists({
+        id: authorId,
+      });
+      return doesBlacklistedUserExist;
+    }
+
     let blacklistJson = {};
     try {
       const blacklistData = await fs.readFile(blacklistFile, "utf8");

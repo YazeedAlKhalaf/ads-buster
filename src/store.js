@@ -7,10 +7,7 @@ async function initializeStore() {
   try {
     const mongoUri = process.env.MONGODB_URI;
     if (mongoUri) {
-      await mongoose.connect(mongoUri, {
-        useNewUrlParser: true,
-        useUnifiedTopology: true,
-      });
+      await mongoose.connect(mongoUri);
       console.log("✅ Connected to MongoDB successfully!");
 
       store = new MongoStore({ mongoose });

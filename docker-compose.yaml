@@ -1,0 +1,8 @@
+services:
+  mongodb:
+    image: mongo:7
+
+  ads-buster:
+    build:
+      context: .
+      dockerfile: Dockerfile

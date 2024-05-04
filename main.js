@@ -1,35 +1,20 @@
-const { Client, RemoteAuth } = require("whatsapp-web.js");
+const { Client } = require("whatsapp-web.js");
 const qrcode = require("qrcode-terminal");
-const { MongoStore } = require("wwebjs-mongo");
-const mongoose = require("mongoose");
-const { LocalAuth } = require("whatsapp-web.js");
+const {
+  initializeAuthStrategy,
+  getAuthStrategy,
+} = require("./src/authStrategy.js");
+const { initializeStore } = require("./src/store.js");
 const { addToAdminList, isAdmin } = require("./src/helpers/admins.js");
 const { addToBlacklist, isBlacklisted } = require("./src/helpers/blacklist.js");
 
 async function main() {
   try {
-    let authStrategy;
-
-    const mongoUri = process.env.MONGODB_URI;
-    if (mongoUri) {
-      await mongoose.connect(mongoUri);
-      console.log("✅ Connected to MongoDB successfully!");
-
-      const store = new MongoStore({ mongoose });
-
-      authStrategy = new RemoteAuth({
-        store,
-        clientId: "ads-buster",
-        backupSyncIntervalMs: 60 * 1000,
-      });
-    } else {
-      authStrategy = new LocalAuth({
-        clientId: "ads-buster",
-      });
-    }
+    await initializeStore();
+    await initializeAuthStrategy();
 
     const client = new Client({
-      authStrategy: authStrategy,
+      authStrategy: getAuthStrategy(),
       webVersion: "2.2412.54",
       puppeteer: {
         args: ["--no-sandbox"],

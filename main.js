@@ -2,19 +2,32 @@ const { Client, RemoteAuth } = require("whatsapp-web.js");
 const qrcode = require("qrcode-terminal");
 const { MongoStore } = require("wwebjs-mongo");
 const mongoose = require("mongoose");
+const { LocalAuth } = require("whatsapp-web.js");
 
-mongoose
-  .connect(process.env.MONGODB_URI)
-  .then(() => {
-    console.log("✅ Connected to mongo db successfully!");
+async function main() {
+  try {
+    let authStrategy;
 
-    const store = new MongoStore({ mongoose: mongoose });
-    const client = new Client({
-      authStrategy: new RemoteAuth({
-        store: store,
+    const mongoUri = process.env.MONGODB_URI;
+    if (mongoUri) {
+      await mongoose.connect(mongoUri);
+      console.log("✅ Connected to MongoDB successfully!");
+
+      const store = new MongoStore({ mongoose });
+
+      authStrategy = new RemoteAuth({
+        store,
         clientId: "ads-buster",
         backupSyncIntervalMs: 60 * 1000,
-      }),
+      });
+    } else {
+      authStrategy = new LocalAuth({
+        clientId: "ads-buster",
+      });
+    }
+
+    const client = new Client({
+      authStrategy: authStrategy,
       webVersion: "2.2412.54",
       puppeteer: {
         args: ["--no-sandbox"],
@@ -31,7 +44,6 @@ mongoose
 
     client.on("message_create", async (message) => {
       console.log("==============");
-      //   console.log(`received a message:`, message);
       if (message.body === "!ping") {
         message.reply("pong");
       }
@@ -39,28 +51,24 @@ mongoose
       if (message.body.startsWith("!kick ")) {
         const chat = await message.getChat();
         if (chat.isGroup) {
-          console.log("this is a group");
-          // monitor the messages if they are from a group
-          // kick ads people and delete thier messages :D
-
+          const group = chat;
           const mentions = await message.getMentions();
-          mentions.forEach(async (mention) => {
-            console.log(`kicking out`, mention);
-            await chat.removeParticipants([mention.id._serialized]);
-
-            // delete messages by this contact
-
-            // maybe yes, and maybe no :D
+          for (const mention of mentions) {
+            console.log(`Kicking out`, mention);
+            await group.removeParticipants([mention.id._serialized]);
+            // Delete messages by this contact
+            // Maybe yes, and maybe no :D
             // await mention.block();
-          });
+          }
         }
       }
-
       console.log("==============");
     });
 
-    client.initialize();
-  })
-  .catch((error) => {
-    console.error(`❌ got error connecting to mongodb: `, error);
-  });
+    await client.initialize();
+  } catch (error) {
+    console.error(`❌ Got error connecting to MongoDB: `, error);
+  }
+}
+
+main();

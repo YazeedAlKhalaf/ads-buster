@@ -10,7 +10,9 @@
   "author": "Yazeed AlKhalaf",
   "license": "ISC",
   "dependencies": {
+    "mongoose": "^8.3.3",
     "qrcode-terminal": "^0.12.0",
-    "whatsapp-web.js": "github:pedroslopez/whatsapp-web.js#webpack-exodus"
+    "whatsapp-web.js": "github:pedroslopez/whatsapp-web.js#webpack-exodus",
+    "wwebjs-mongo": "^1.1.0"
   }
 }

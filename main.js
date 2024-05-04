@@ -1,49 +1,66 @@
-const { Client, LocalAuth } = require("whatsapp-web.js");
+const { Client, RemoteAuth } = require("whatsapp-web.js");
 const qrcode = require("qrcode-terminal");
+const { MongoStore } = require("wwebjs-mongo");
+const mongoose = require("mongoose");
 
-const client = new Client({
-  authStrategy: new LocalAuth({
-    clientId: "ads-buster",
-  }),
-  webVersion: "2.2412.54",
-});
+mongoose
+  .connect(process.env.MONGODB_URI)
+  .then(() => {
+    console.log("✅ Connected to mongo db successfully!");
 
-client.once("ready", () => {
-  console.log("👻 Ads Buster is ready!");
-});
+    const store = new MongoStore({ mongoose: mongoose });
+    const client = new Client({
+      authStrategy: new RemoteAuth({
+        store: store,
+        clientId: "ads-buster",
+        backupSyncIntervalMs: 60 * 1000,
+      }),
+      webVersion: "2.2412.54",
+      puppeteer: {
+        args: ["--no-sandbox"],
+      },
+    });
 
-client.on("qr", (qr) => {
-  qrcode.generate(qr, { small: true });
-});
+    client.once("ready", () => {
+      console.log("👻 Ads Buster is ready!");
+    });
 
-client.on("message_create", async (message) => {
-  console.log("==============");
-  //   console.log(`received a message:`, message);
-  if (message.body === "!ping") {
-    message.reply("pong");
-  }
+    client.on("qr", (qr) => {
+      qrcode.generate(qr, { small: true });
+    });
 
-  if (message.body.startsWith("!kick ")) {
-    const chat = await message.getChat();
-    if (chat.isGroup) {
-      console.log("this is a group");
-      // monitor the messages if they are from a group
-      // kick ads people and delete thier messages :D
+    client.on("message_create", async (message) => {
+      console.log("==============");
+      //   console.log(`received a message:`, message);
+      if (message.body === "!ping") {
+        message.reply("pong");
+      }
 
-      const mentions = await message.getMentions();
-      mentions.forEach(async (mention) => {
-        console.log(`kicking out`, mention);
-        await chat.removeParticipants([mention.id._serialized]);
+      if (message.body.startsWith("!kick ")) {
+        const chat = await message.getChat();
+        if (chat.isGroup) {
+          console.log("this is a group");
+          // monitor the messages if they are from a group
+          // kick ads people and delete thier messages :D
 
-        // delete messages by this contact
+          const mentions = await message.getMentions();
+          mentions.forEach(async (mention) => {
+            console.log(`kicking out`, mention);
+            await chat.removeParticipants([mention.id._serialized]);
 
-        // maybe yes, and maybe no :D
-        // await mention.block();
-      });
-    }
-  }
+            // delete messages by this contact
 
-  console.log("==============");
-});
+            // maybe yes, and maybe no :D
+            // await mention.block();
+          });
+        }
+      }
 
-client.initialize();
+      console.log("==============");
+    });
+
+    client.initialize();
+  })
+  .catch((error) => {
+    console.error(`❌ got error connecting to mongodb: `, error);
+  });

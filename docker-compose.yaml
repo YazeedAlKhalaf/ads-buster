@@ -1,8 +1,16 @@
 services:
-  mongodb:
+  our-mongo:
     image: mongo:7
+    ports:
+      - "27017:27017"
+    volumes:
+      - ./0data:/data/db
 
   ads-buster:
     build:
       context: .
       dockerfile: Dockerfile
+    depends_on:
+      - our-mongo
+    environment:
+      - MONGODB_URI=mongodb://our-mongo:27017/ads-buster

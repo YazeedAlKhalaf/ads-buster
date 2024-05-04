@@ -35,19 +35,18 @@ async function main() {
         console.debug("MESSAGE RECEIVED: ", message);
 
         const chat = await message.getChat();
-        const canDoAdminOps = (await isAdmin(message.from)) || message.fromMe;
+        const canDoAdminOps =
+          (await isAdmin(message.author ?? "")) || message.fromMe;
 
         if (message.body === "!ping") {
           message.reply("pong");
         }
 
-        if (message.body.startsWith("!admin ")) {
-          if (canDoAdminOps) {
-            const mentions = await message.getMentions();
-            for (const mention of mentions) {
-              console.log(`👑 Adding admin: `, mention);
-              await addToAdminList(mention.id._serialized);
-            }
+        if (message.body.startsWith("!admin ") && canDoAdminOps) {
+          const mentions = await message.getMentions();
+          for (const mention of mentions) {
+            console.log(`👑 Adding admin: `, mention);
+            await addToAdminList(mention.id._serialized);
           }
         }
 
@@ -59,6 +58,7 @@ async function main() {
             for (const mention of mentions) {
               console.log(`🥾 Kicking out`, mention);
               await group.removeParticipants([mention.id._serialized]);
+              await addToBlacklist(mention.id._serialized);
 
               // this is just ot make sure whatsapp doesn't ban us :D
               await new Promise((resolve) => setTimeout(resolve, 750));
@@ -97,7 +97,6 @@ async function main() {
                 }
               }
 
-              // add the ad sender id to the block list in filesystem as json map, so it is efficient
               await addToBlacklist(quoted.author);
             }
           }

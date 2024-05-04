@@ -25,6 +25,30 @@ async function main() {
       console.log("👻 Ads Buster is ready!");
     });
 
+    client.on("authenticated", (session) => {
+      console.log("🔑 Authenticated!");
+    });
+
+    client.on("auth_failure", (msg) => {
+      console.error("❌ Auth failure: ", msg);
+    });
+
+    client.on("disconnected", (reason) => {
+      console.error("❌ Disconnected: ", reason);
+
+      // Clean up
+      client.destroy();
+      process.exit();
+    });
+
+    client.on("loading_screen", () => {
+      console.log("⏳ Loading screen...");
+    });
+
+    client.on("change_state", (state) => {
+      console.log("🔄 State changed: ", state);
+    });
+
     client.on("qr", (qr) => {
       qrcode.generate(qr, { small: true });
     });

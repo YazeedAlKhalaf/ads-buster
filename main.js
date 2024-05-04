@@ -70,7 +70,7 @@ async function main() {
           const mentions = await message.getMentions();
           for (const mention of mentions) {
             console.log(`👑 Adding admin: `, mention);
-            await addToAdminList(mention.id._serialized);
+            await addToAdminList(mention.id._serialized, message.author);
           }
         }
 
@@ -82,7 +82,11 @@ async function main() {
             for (const mention of mentions) {
               console.log(`🥾 Kicking out`, mention);
               await group.removeParticipants([mention.id._serialized]);
-              await addToBlacklist(mention.id._serialized);
+              await addToBlacklist(
+                mention.id._serialized,
+                message.author,
+                "!kick"
+              );
 
               // this is just ot make sure whatsapp doesn't ban us :D
               await new Promise((resolve) => setTimeout(resolve, 750));
@@ -93,35 +97,117 @@ async function main() {
             }
           } else if (message.body === "!ad" && message.hasQuotedMsg) {
             const quoted = await message.getQuotedMessage();
+            const authorToBurn = quoted.author;
 
-            if (quoted.author) {
-              console.log("🔥 Burning AD from: ", quoted.author);
-              await group.removeParticipants([quoted.author]);
+            let canStartBurningAd = true;
 
-              // delete the message of the ad sender
-              await quoted.delete(true);
+            // check if the author is an admin
+            const isAuthorAdmin = await isAdmin(authorToBurn);
+            if (isAuthorAdmin) {
+              console.log("👑 Admin detected: ", authorToBurn);
+              canStartBurningAd = false;
+            }
 
-              // remove participant from all groups the bot is in
+            // check if the author is blacklisted
+            const isAuthorBlacklisted = await isBlacklisted(authorToBurn);
+            if (isAuthorBlacklisted) {
+              console.log("🚫 Blacklisted user detected: ", authorToBurn);
+              canStartBurningAd = false;
+            }
+
+            if (canStartBurningAd) {
+              console.log("🔥 Burning AD from: ", authorToBurn);
+
+              await addToBlacklist(authorToBurn, message.author, "!ad");
+              await group.removeParticipants([authorToBurn]);
+              await quoted.delete(true); // delete reported message
+              await message.delete(true); // delete report message
+
+              // remove this ad sender from all groups the bot is in.
               const chats = await client.getChats();
               for (const chat of chats) {
                 if (chat.isGroup) {
                   const theGroup = chat;
-                  theGroup.participants.forEach(async (participant) => {
-                    if (participant.id._serialized === quoted.author) {
-                      console.log(
-                        `🥾 Attempting to kick out ${quoted.author} from ${theGroup.name}`
-                      );
 
-                      await theGroup.removeParticipants([quoted.author]);
-
-                      // this is just ot make sure whatsapp doesn't ban us :D
-                      await new Promise((resolve) => setTimeout(resolve, 750));
+                  let isCurrentUserAdmin = false;
+                  theGroup.participants.forEach((participant) => {
+                    const isParticipantAdmin =
+                      participant.isAdmin || participant.isSuperAdmin;
+                    const isParticipantCurrentUser =
+                      participant.id._serialized ===
+                      client.info.wid._serialized;
+                    if (isParticipantCurrentUser && isParticipantAdmin) {
+                      isCurrentUserAdmin = true;
                     }
                   });
-                }
-              }
 
-              await addToBlacklist(quoted.author);
+                  if (isCurrentUserAdmin) {
+                    theGroup.participants.forEach(async (participant) => {
+                      if (participant.id._serialized === authorToBurn) {
+                        console.log(
+                          `🥾 Kicking out ${authorToBurn} from ${theGroup.name}`
+                        );
+
+                        await theGroup.removeParticipants([authorToBurn]);
+
+                        // this is just ot make sure whatsapp doesn't ban us :D
+                        await new Promise((resolve) =>
+                          setTimeout(resolve, 750)
+                        );
+                      }
+                    });
+                  } else {
+                    console.log(
+                      `❌ I'm not an admin in ${theGroup.name}, can't kick out ${authorToBurn}`
+                    );
+
+                    let authorUser = authorToBurn.split("@");
+                    if (authorUser.length != 2) {
+                      console.error(
+                        `❌ Invalid author user: ${authorToBurn}, skipping`
+                      );
+                      return;
+                    }
+                    authorUser = authorUser[0];
+
+                    // get admins to mention them
+                    const admins = theGroup.participants.filter(
+                      (participant) =>
+                        participant.isAdmin || participant.isSuperAdmin
+                    );
+
+                    const mentions = [];
+                    let adminMentionsMessagePart = "";
+                    admins.forEach((admin) => {
+                      adminMentionsMessagePart += `@${admin.id.user} `;
+
+                      mentions.push(admin.id._serialized);
+                    });
+                    adminMentionsMessagePart = adminMentionsMessagePart.trim();
+                    adminMentionsMessagePart =
+                      adminMentionsMessagePart === ""
+                        ? ""
+                        : "\n\n" + adminMentionsMessagePart;
+
+                    // Send a fun message to the group to inform the admin
+                    await theGroup.sendMessage(
+                      `🚨 ALERT! 🚨 An AD sender has been detected! Quick, someone grab the boot! 🥾
+  
+🕵️ Detected AD sender: @${authorUser}
+  
+Your friendly neighborhood Ad Buster is here to save the day! 👻
+  
+P.S. Let's make me an admin so I can kick out these pesky AD senders automatically in the future! 😇${adminMentionsMessagePart}`,
+                      {
+                        mentions: [authorToBurn, ...mentions],
+                      }
+                    );
+                  }
+                }
+
+                // this is just ot make sure whatsapp doesn't ban us :D
+                await new Promise((resolve) => setTimeout(resolve, 750));
+              }
             }
           }
         }

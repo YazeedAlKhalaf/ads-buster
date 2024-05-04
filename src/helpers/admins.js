@@ -5,13 +5,28 @@ const fs = require("fs").promises;
 
 const adminListFile = path.join(__dirname, "adminlist.json");
 
-const Admin = mongoose.model("Admin", { id: String });
+const Admin = mongoose.model("Admin", {
+  id: String,
+  doerId: String,
+  createdAt: { type: Date, default: Date.now },
+});
 
-async function addToAdminList(adminId) {
+/**
+ *
+ * @param {string} adminId
+ * @param {string} doerId
+ */
+async function addToAdminList(adminId, doerId) {
   try {
     if (getStore()) {
-      const admin = new Admin({ id: adminId });
-      await admin.save();
+      const doesAdminExist = await Admin.exists({ id: adminId });
+      if (!doesAdminExist) {
+        const admin = new Admin({ id: adminId, doerId: doerId });
+        await admin.save();
+        console.log(`👑 Added ${adminId} to admin list.`);
+      } else {
+        console.log(`👑 Admin ${adminId} already exists.`);
+      }
     } else {
       let adminListJson = {};
       try {

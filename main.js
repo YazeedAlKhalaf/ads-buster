@@ -120,7 +120,9 @@ async function main() {
 
               await addToBlacklist(authorToBurn, message.author, "!ad");
               await group.removeParticipants([authorToBurn]);
+              await new Promise((resolve) => setTimeout(resolve, 500)); // wait a bit, just to make sure the participant is removed
               await quoted.delete(true); // delete reported message
+              await new Promise((resolve) => setTimeout(resolve, 500)); // wait a bit, just to make sure the message is deleted
               await message.delete(true); // delete report message
 
               // remove this ad sender from all groups the bot is in.

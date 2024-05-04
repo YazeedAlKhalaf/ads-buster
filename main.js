@@ -5,6 +5,7 @@ const client = new Client({
   authStrategy: new LocalAuth({
     clientId: "ads-buster",
   }),
+  webVersion: "2.2412.54",
 });
 
 client.once("ready", () => {

@@ -21,10 +21,6 @@ async function main() {
       },
     });
 
-    client.once("ready", () => {
-      console.log("👻 Ads Buster is ready!");
-    });
-
     client.on("authenticated", (session) => {
       console.log("🔑 Authenticated!");
     });
@@ -53,6 +49,41 @@ async function main() {
       qrcode.generate(qr, { small: true });
     });
 
+    client.once("ready", async () => {
+      console.log("👻 Ads Buster is ready!");
+
+      try {
+        // check all groups for blacklisted users and kick them out
+        const chats = await client.getChats();
+        for (const chat of chats) {
+          if (chat.isGroup) {
+            /**
+             * @type {import('whatsapp-web.js').GroupChat}
+             */
+            const group = chat;
+            const participants = group.participants;
+            for (const participant of participants) {
+              const isBlacklistedUser = await isBlacklisted(
+                participant.id._serialized
+              );
+              if (isBlacklistedUser) {
+                console.log(
+                  `🥾 Kicking out blacklisted user: `,
+                  participant.id._serialized
+                );
+
+                // add delay to avoid getting banned by whatsapp
+                await new Promise((resolve) => setTimeout(resolve, 550));
+                await group.removeParticipants([participant.id._serialized]);
+              }
+            }
+          }
+        }
+      } catch (error) {
+        console.error("Error in ready handler:", error);
+      }
+    });
+
     client.on("message_create", async (message) => {
       try {
         console.log("==============");
@@ -76,6 +107,9 @@ async function main() {
 
         // group only commands
         if (chat.isGroup && canDoAdminOps) {
+          /**
+           * @type {import('whatsapp-web.js').GroupChat}
+           */
           const group = chat;
           if (message.body.startsWith("!kick ")) {
             const mentions = await message.getMentions();

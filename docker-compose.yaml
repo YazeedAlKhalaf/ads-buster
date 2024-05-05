@@ -14,3 +14,15 @@ services:
       - our-mongo
     environment:
       - MONGODB_URI=mongodb://our-mongo:27017/ads-buster
+
+  our-mongo-express:
+    image: mongo-express:1.0.2
+    ports:
+      - "8081:8081"
+    depends_on:
+      - our-mongo
+    environment:
+      ME_CONFIG_MONGODB_SERVER: our-mongo
+      ME_CONFIG_BASICAUTH_USERNAME: admin
+      ME_CONFIG_BASICAUTH_PASSWORD: ${MONGO_EXPRESS_ADMIN_PASSWORD}
+      ME_CONFIG_MONGODB_URL: "mongodb://our-mongo:27017/ads-buster"

@@ -72,9 +72,23 @@ async function main() {
                   participant.id._serialized
                 );
 
-                // add delay to avoid getting banned by whatsapp
-                await new Promise((resolve) => setTimeout(resolve, 550));
-                await group.removeParticipants([participant.id._serialized]);
+                // check if i am an admin in this group
+                let isCurrentUserAdmin = false;
+                group.participants.forEach((participant) => {
+                  const isParticipantAdmin =
+                    participant.isAdmin || participant.isSuperAdmin;
+                  const isParticipantCurrentUser =
+                    participant.id._serialized === client.info.wid._serialized;
+                  if (isParticipantCurrentUser && isParticipantAdmin) {
+                    isCurrentUserAdmin = true;
+                  }
+                });
+
+                if (isCurrentUserAdmin) {
+                  // add delay to avoid getting banned by whatsapp
+                  await new Promise((resolve) => setTimeout(resolve, 550));
+                  await group.removeParticipants([participant.id._serialized]);
+                }
               }
             }
           }

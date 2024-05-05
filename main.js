@@ -177,6 +177,9 @@ async function main() {
               const chats = await client.getChats();
               for (const chat of chats) {
                 if (chat.isGroup) {
+                  /**
+                   * @type {import('whatsapp-web.js').GroupChat}
+                   */
                   const theGroup = chat;
 
                   let isCurrentUserAdmin = false;
@@ -191,8 +194,8 @@ async function main() {
                     }
                   });
 
-                  if (isCurrentUserAdmin) {
-                    theGroup.participants.forEach(async (participant) => {
+                  theGroup.participants.forEach(async (participant) => {
+                    if (isCurrentUserAdmin) {
                       if (participant.id._serialized === authorToBurn) {
                         console.log(
                           `🥾 Kicking out ${authorToBurn} from ${theGroup.name}`
@@ -205,54 +208,55 @@ async function main() {
                           setTimeout(resolve, 750)
                         );
                       }
-                    });
-                  } else {
-                    console.log(
-                      `❌ I'm not an admin in ${theGroup.name}, can't kick out ${authorToBurn}`
-                    );
-
-                    let authorUser = authorToBurn.split("@");
-                    if (authorUser.length != 2) {
-                      console.error(
-                        `❌ Invalid author user: ${authorToBurn}, skipping`
+                    } else {
+                      console.log(
+                        `❌ I'm not an admin in ${theGroup.name}, can't kick out ${authorToBurn}`
                       );
-                      return;
-                    }
-                    authorUser = authorUser[0];
 
-                    // get admins to mention them
-                    const admins = theGroup.participants.filter(
-                      (participant) =>
-                        participant.isAdmin || participant.isSuperAdmin
-                    );
-
-                    const mentions = [];
-                    let adminMentionsMessagePart = "";
-                    admins.forEach((admin) => {
-                      adminMentionsMessagePart += `@${admin.id.user} `;
-
-                      mentions.push(admin.id._serialized);
-                    });
-                    adminMentionsMessagePart = adminMentionsMessagePart.trim();
-                    adminMentionsMessagePart =
-                      adminMentionsMessagePart === ""
-                        ? ""
-                        : "\n\n" + adminMentionsMessagePart;
-
-                    // Send a fun message to the group to inform the admin
-                    await theGroup.sendMessage(
-                      `🚨 ALERT! 🚨 An AD sender has been detected! Quick, someone grab the boot! 🥾
-  
-🕵️ Detected AD sender: @${authorUser}
-  
-Your friendly neighborhood Ad Buster is here to save the day! 👻
-  
-P.S. Let's make me an admin so I can kick out these pesky AD senders automatically in the future! 😇${adminMentionsMessagePart}`,
-                      {
-                        mentions: [authorToBurn, ...mentions],
+                      let authorUser = authorToBurn.split("@");
+                      if (authorUser.length != 2) {
+                        console.error(
+                          `❌ Invalid author user: ${authorToBurn}, skipping`
+                        );
+                        return;
                       }
-                    );
-                  }
+                      authorUser = authorUser[0];
+
+                      // get admins to mention them
+                      const admins = theGroup.participants.filter(
+                        (participant) =>
+                          participant.isAdmin || participant.isSuperAdmin
+                      );
+
+                      const mentions = [];
+                      let adminMentionsMessagePart = "";
+                      admins.forEach((admin) => {
+                        adminMentionsMessagePart += `@${admin.id.user} `;
+
+                        mentions.push(admin.id._serialized);
+                      });
+                      adminMentionsMessagePart =
+                        adminMentionsMessagePart.trim();
+                      adminMentionsMessagePart =
+                        adminMentionsMessagePart === ""
+                          ? ""
+                          : "\n\n" + adminMentionsMessagePart;
+
+                      // Send a fun message to the group to inform the admin
+                      await theGroup.sendMessage(
+                        `🚨 ALERT! 🚨 An AD sender has been detected! Quick, someone grab the boot! 🥾
+      
+    🕵️ Detected AD sender: @${authorUser}
+      
+    Your friendly neighborhood Ad Buster is here to save the day! 👻
+      
+    P.S. Let's make me an admin so I can kick out these pesky AD senders automatically in the future! 😇${adminMentionsMessagePart}`,
+                        {
+                          mentions: [authorToBurn, ...mentions],
+                        }
+                      );
+                    }
+                  });
                 }
 
                 // this is just ot make sure whatsapp doesn't ban us :D

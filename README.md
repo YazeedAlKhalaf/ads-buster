@@ -1,6 +1,6 @@
 # 👻 WhatsApp Ads Buster
 
-Tired of annoying ads in your university WhatsApp groups? Me too! That’s why I created WhatsApp Ads Buster. Let’s make our student life quieter and ad-free! 🎉
+i am making this tool out of a personal need, ads in the university groups are so annoying. let us hope this tool makes our lives as students, quieter :D
 
 > For .wwebjs_cache versions, check this link: [WhatsApp Web Versions](https://github.com/wppconnect-team/wa-version/tree/main/html)
 
